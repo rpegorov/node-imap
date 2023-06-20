@@ -1,0 +1,1 @@
+Simple connect to mail for imap protocol.
