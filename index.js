@@ -2,7 +2,7 @@ const Imap = require('node-imap');
 const inspect = require('util').inspect;
 
 const imap = new Imap({
-    user: 'example@mail.com',
+    user: 'example@yandex.ru',
     password: 'password',
     host: 'imap.yandex.ru',
     port: 993,
