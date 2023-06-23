@@ -10,8 +10,13 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@types/imap": "^0.8.37",
+    "base64-stream": "^1.0.0",
+    "imap": "^0.8.19",
+    "libqp": "^2.0.1",
     "mailparser": "^3.6.4",
     "node-imap": "^0.9.6",
+    "quoted-printable": "^1.0.1",
     "redis": "^4.6.7"
   }
 }
