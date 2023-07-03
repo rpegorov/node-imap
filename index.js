@@ -8,7 +8,7 @@ const Imap = require('imap');
 const imap = new Imap(config.imap);
 
 function findAttachmentParts(struct, attachments) {
-  attachments = attachments ||  [];
+  attachments = attachments || [];
   for (var i = 0, len = struct.length, r; i < len; ++i) {
     if (Array.isArray(struct[i])) {
       findAttachmentParts(struct[i], attachments);
@@ -25,61 +25,62 @@ function buildAttMessageFunction(attachment) {
   let filename = attachment.params.name;
   let encoding = attachment.encoding;
   let decoder = new libqp.Decoder();
-  
+
 
   return function (msg, seqno) {
     let prefix = '(#' + seqno + ') ';
-    msg.on('body', function(stream, info) {
+    msg.on('body', function (stream, info) {
       //Create a write stream so that we can stream the attachment to file;
       console.log(prefix + 'Streaming this attachment to file', filename, info);
-      let writeStream = fs.createWriteStream( (config.downloads && config.downloads.directory) ? `${config.downloads.directory}/${filename}` : filename);
-      writeStream.on('finish', function() {
+      let writeStream = fs.createWriteStream((config.downloads && config.downloads.directory) ? `${config.downloads.directory}/${filename}` : filename);
+      writeStream.on('finish', function () {
         console.log(prefix + 'Done writing to file %s', filename);
       });
 
       //so we decode during streaming using 
-      // if (encoding.toLowerCase() === 'base64') {
-        //the stream is base64 encoded, so here the stream is decode on the fly and piped to the write stream (file)
+      if (encoding.toLowerCase() === 'base64') {
+      //the stream is base64 encoded, so here the stream is decode on the fly and piped to the write stream (file)
+      stream.pipe(new Base64Decode).pipe(writeStream)
+      } else  {
+      //here we have none or some other decoding streamed directly to the file which renders it useless probably
+      // stream.pipe(writeStream);
         stream.pipe(decoder).pipe(writeStream)
-      // } else  {
-        //here we have none or some other decoding streamed directly to the file which renders it useless probably
-        // stream.pipe(writeStream);
-      // }
+      }
     });
-    msg.once('end', function() {
+    msg.once('end', function () {
       console.log(prefix + 'Finished attachment %s', filename);
     });
   };
 }
 
-imap.once('ready', function() {
-  imap.openBox('INBOX', true, function(err, box) {
+imap.once('ready', function () {
+  imap.openBox('INBOX', true, function (err, box) {
     if (err) throw err;
-    var f = imap.fetch('1:*', {
+    var f = imap.fetch('57', {
       bodies: ['', 'TEXT'],
       struct: true
     });
     f.on('message', function (msg, seqno) {
       console.log('Message #%d', seqno);
       const prefix = '(#' + seqno + ') ';
-      msg.on('body', function(stream, info) {
+      msg.on('body', function (stream, info) {
         var buffer = '';
-        stream.on('data', function(chunk) {
+        stream.on('data', function (chunk) {
           buffer += chunk.toString('utf8');
         });
-        stream.once('end', function() {
+        stream.once('end', function () {
           console.log(prefix + 'Parsed header: %s', Imap.parseHeader(buffer));
           console.log(Imap.parseHeader(buffer).from)
           console.log(Imap.parseHeader(buffer).subject)
         });
       });
-      msg.once('attributes', function(attrs) {
+      msg.once('attributes', function (attrs) {
         const attachments = findAttachmentParts(attrs.struct);
         console.log(prefix + 'Has attachments: %d', attachments.length);
-        for (var i = 0, len=attachments.length ; i < len; ++i) {
+        for (var i = 0, len = attachments.length; i < len; ++i) {
           const attachment = attachments[i];
           console.log(prefix + 'Fetching attachment %s', attachment.params.name);
-          var f = imap.fetch(attrs.uid , {
+          var f = imap.fetch(attrs.uid, {
             bodies: [attachment.partID],
             struct: true
           });
@@ -87,25 +88,25 @@ imap.once('ready', function() {
           f.on('message', buildAttMessageFunction(attachment));
         }
       });
-      msg.once('end', function() {
+      msg.once('end', function () {
         console.log(prefix + 'Finished email');
       });
     });
-    f.once('error', function(err) {
+    f.once('error', function (err) {
       console.log('Fetch error: ' + err);
     });
-    f.once('end', function() {
+    f.once('end', function () {
       console.log('Done fetching all messages!');
       imap.end();
     });
   });
 });
 
-imap.once('error', function(err) {
+imap.once('error', function (err) {
   console.log(err);
 });
 
-imap.once('end', function() {
+imap.once('end', function () {
   console.log('Connection ended');
 });
 

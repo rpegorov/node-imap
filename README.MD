@@ -1,1 +1,3 @@
-Simple connect to mail for imap protocol.
+# imap-searcher
+
+mail searcher by imap protocol

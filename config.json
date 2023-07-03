@@ -1,0 +1,12 @@
+{
+    "imap": {
+        "user": "egorov.rp@it-rkomi.ru",
+        "password": "P3H0RQzH",
+        "host": "imap.yandex.ru",
+        "port": 993,
+        "tls": true
+    },
+    "downloads": {
+        "directory": "./"
+    }
+}
