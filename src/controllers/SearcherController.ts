@@ -15,7 +15,8 @@ router.post('/search', async (req: Request<{ body: IImap }>, res: Response) => {
         user
     };
     try {
-        const attachment: IAttachment[] = await SearchService.searchAndRetrieveAttachments(imap);
+        const searchService = req.app.get('searchService');
+        const attachment: IAttachment[] = await searchService.searchAndRetrieveAttachments(imap);
         res.status(200).json(attachment);
     } catch (error) {
         res.status(400).json({ error: 'Соединение с сервером почты не удалось.' });
