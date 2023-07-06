@@ -13,7 +13,6 @@ export class SearchService {
     return new Promise<IAttachment[]>((resolve, reject) => {
       connection.once('ready', async () => {
         try {
-          await openInbox(connection);
           const foundMessage = await searchMessages(connection);
           const attachments = await fetchAttachmentParts(connection, foundMessage);
           resolve(attachments);
@@ -25,6 +24,40 @@ export class SearchService {
       });
       connection.connect();
     });
+
+    async function searchMessages(connection: Connection): Promise<number[]> {
+      const lastSearchData = await LastSearchRepository.findLastMessageId(imap.user);
+      const regex = /резюме/igm;
+      const uidCriteria = ['UID', lastSearchData + 1 + ':*'];
+      const textCriteria = ['TEXT', regex.source];
+
+      return new Promise((resolve, reject) => {
+        connection.openBox('INBOX', (error: Error, mailboxStatus: any) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          const lastMessageId = mailboxStatus.uidnext - 1;
+
+          if (lastSearchData >= lastMessageId) {
+            reject(error);
+            return;
+          }
+
+          connection.search(
+            [uidCriteria, textCriteria],
+            (error: Error, foundMessage: number[]) => {
+              if (error) {
+                reject(error);
+                return;
+              }
+              resolve(foundMessage);
+            }
+          );
+        });
+      });
+    }
 
     function fetchAttachmentParts(connection: Connection, foundMessage: number[]): Promise<IAttachment[]> {
       const fetch = connection.fetch(foundMessage, {
@@ -97,12 +130,10 @@ export class SearchService {
 
             let attachmentData: IAttachment = {
               filename: filename,
-              ext: attachment.subtype,
+              subType: attachment.subtype,
               content: content.toString(),
-              contentType: attachment.type
+              type: attachment.type
             };
-
-            console.log(prefix + 'Finished streaming attachment:', filename);
             resolve(attachmentData);
           });
 
@@ -126,40 +157,6 @@ export class SearchService {
         }
       }
       return attachments;
-    }
-
-    function openInbox(connection: Connection): Promise<void> {
-      return new Promise((resolve, reject) => {
-        connection.openBox('INBOX', false, (err: Error) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          resolve();
-        });
-      });
-    }
-
-    async function searchMessages(connection: Connection): Promise<number[]> {
-      const lastMessageId = await LastSearchRepository.findLastMessageId(imap.user);
-      const regex = new RegExp("резюме", "i");
-      const uidCriteria = ['UID', lastMessageId + ':*'];
-      const subjectHeader = ['HEADER', 'SUBJECT', regex.source];
-      const textCriteria = ['TEXT', regex.source];
-      const bodyCriteria = ['BODY', regex.source];
-
-      return new Promise((resolve, reject) => {
-        connection.search(
-          [uidCriteria, subjectHeader, textCriteria, bodyCriteria],
-          (error: Error, foundMessage: number[]) => {
-            if (error) {
-              reject(error);
-              return;
-            }
-            resolve(foundMessage);
-          }
-        );
-      });
     }
   }
 }

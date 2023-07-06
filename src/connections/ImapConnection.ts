@@ -1,5 +1,5 @@
 import { IImap } from "../interfaces/IImap";
-import Imap = require('node-imap');
+import Imap from 'node-imap';
 
 
 export class ImapConnections {
